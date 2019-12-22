@@ -1,0 +1,12 @@
+language: python
+python:
+  - "3.6.5"
+install:
+  - pip install pip==10.0.1
+  - pip -V
+  - pip install --progress-bar off -r src/requirements.txt
+  - pip install --progress-bar off -r tests/requirements.txt
+script:
+  - export PYTHONPATH=./src
+  - pytest --tb=short
+
