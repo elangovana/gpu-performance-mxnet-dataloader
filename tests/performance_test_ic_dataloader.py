@@ -11,10 +11,9 @@ from mxnet import gluon
 from mxnet.gluon.model_zoo import vision as models
 from mxnet.optimizer import SGD
 
-from data_loader_images import DataLoaderImages
-from data_loader_recordio import DataLoaderRecordIo
 from images_utils import get_labels, create_images_list
-from mxnet_single_trainer import Trainer
+from iterator_utils import get_recordio_iterator, get_image_iterator_raw_files
+from single_gpu_train import Trainer
 
 
 class TestPerformanceTestICDataLoaderLoader():
@@ -64,8 +63,7 @@ class TestPerformanceTestICDataLoaderLoader():
         tmpdir = tempfile.mkdtemp()
 
         images_lst, labels_dict = create_images_list(images_dir)
-        data_loader = DataLoaderImages(images_dir, images_lst)
-        data_iter = data_loader(self.num_workers, batch_size=self.batch_size, data_shape=self.data_shape)
+        image_iterator = get_image_iterator_raw_files(images_dir, images_lst, self.batch_size, self.data_shape)
 
         # Load network
         net = models.get_model('resnet34_v2', pretrained=False, classes=len(labels_dict))
@@ -75,7 +73,7 @@ class TestPerformanceTestICDataLoaderLoader():
 
         # Act
         result_time = timeit.timeit(
-            lambda: sut(data_iter, None, net, self.optimiser, self.loss, tmpdir,
+            lambda: sut(image_iterator, None, net, self.optimiser, self.loss, tmpdir,
                         batch_size=self.batch_size,
                         epochs=self.num_epochs, ctx=self.device),
             number=self.n_times)
@@ -84,7 +82,7 @@ class TestPerformanceTestICDataLoaderLoader():
 
         print("Total time is {}".format(result_time))
 
-    def testPerformanceRecordIoFormat(self, record_io_dir_prefix):
+    def testPerformanceRecordIoIteratorRecordIoFormat(self, record_io_dir_prefix):
         """Using images in dir {0} type {2}"""
         # Arrange
         # Verify images exist
@@ -107,8 +105,7 @@ class TestPerformanceTestICDataLoaderLoader():
         tmpdir = tempfile.mkdtemp()
 
         # TODO: Fix for multiple record io and idx files
-        data_loader = DataLoaderRecordIo(idx_files[0], record_io_files[0])
-        data_iter = data_loader(self.num_workers, batch_size=self.batch_size, data_shape=self.data_shape)
+        image_iterator = get_recordio_iterator(record_io_files[0], self.batch_size, self.data_shape)
 
         # Load network
         net = models.get_model('resnet34_v2', pretrained=False, classes=label_sizes)
@@ -118,7 +115,7 @@ class TestPerformanceTestICDataLoaderLoader():
 
         # Act
         result_time = timeit.timeit(
-            lambda: sut(data_iter, None, net, self.optimiser, self.loss, tmpdir,
+            lambda: sut(image_iterator, None, net, self.optimiser, self.loss, tmpdir,
                         batch_size=self.batch_size,
                         epochs=self.num_epochs),
             number=self.n_times)
